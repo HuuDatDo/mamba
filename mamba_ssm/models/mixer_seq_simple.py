@@ -149,7 +149,7 @@ class MixerModel(nn.Module):
         hidden_states = self.embedding(input_ids)
         residual = None
         for layer in self.layers:
-            hidden_states, residual = layer(
+            hidden_states, residual, latent_state = layer(
                 hidden_states, residual, inference_params=inference_params
             )
         if not self.fused_add_norm:
@@ -167,7 +167,7 @@ class MixerModel(nn.Module):
                 prenorm=False,
                 residual_in_fp32=self.residual_in_fp32,
             )
-        return hidden_states
+        return hidden_states, latent_state
 
 
 class MambaLMHeadModel(nn.Module, GenerationMixin):
@@ -218,11 +218,12 @@ class MambaLMHeadModel(nn.Module, GenerationMixin):
         "position_ids" is just to be compatible with Transformer generation. We don't use it.
         num_last_tokens: if > 0, only return the logits for the last n tokens
         """
-        hidden_states = self.backbone(input_ids, inference_params=inference_params)
+        hidden_states, latent_state = self.backbone(input_ids, inference_params=inference_params)
         if num_last_tokens > 0:
             hidden_states = hidden_states[:, -num_last_tokens:]
         lm_logits = self.lm_head(hidden_states)
         CausalLMOutput = namedtuple("CausalLMOutput", ["logits"])
+        print("----------SSM STATE:", latent_state.size(),"----------")
         return CausalLMOutput(logits=lm_logits)
 
     @classmethod

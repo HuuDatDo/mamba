@@ -204,7 +204,7 @@ class Mamba(nn.Module):
                 ssm_state.copy_(last_state)
             y = rearrange(y, "b d l -> b l d")
             out = self.out_proj(y)
-        return out
+        return out, ssm_state
 
     def step(self, hidden_states, conv_state, ssm_state):
         dtype = hidden_states.dtype
@@ -347,8 +347,8 @@ class Block(nn.Module):
                 residual_in_fp32=self.residual_in_fp32,
                 eps=self.norm.eps,
             )
-        hidden_states = self.mixer(hidden_states, inference_params=inference_params)
-        return hidden_states, residual
+        hidden_states, latent_states = self.mixer(hidden_states, inference_params=inference_params)
+        return hidden_states, residual, latent_states
 
     def allocate_inference_cache(self, batch_size, max_seqlen, dtype=None, **kwargs):
         return self.mixer.allocate_inference_cache(batch_size, max_seqlen, dtype=dtype, **kwargs)
